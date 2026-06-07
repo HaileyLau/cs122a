@@ -232,14 +232,91 @@ def import_data(folderName):
         con.close()
     
 
-def insert_admin():
-    pass
+def insert_admin(uid, email, username, joined, firstname, lastname):
+    con = get_sql_connection()
+    cursor = con.cursor()
 
-def add_venue():
-    pass
+    try:
+        cursor.execute(
+            "INSERT INTO User (uid, email, username, joined) VALUES (%s, %s, %s, %s)",
+            (uid, email, username, joined)
+        )
 
-def reserve_slot():
-   pass
+        cursor.execute(
+            "INSERT INTO Administrator (uid, firstname, lastname) VALUES (%s, %s, %s)",
+            (uid, firstname, lastname)
+        )
+
+        con.commit()
+
+        print("Success")
+    except Exception:
+        print("Fail")
+    finally:
+        cursor.close()
+        con.close()
+ 
+
+def add_venue(eid, vid, is_primary):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        if is_primary:
+            cursor.execute(
+                "SELECT COUNT(*) FROM Hosting WHERE eid = %s AND is_primary = TRUE",
+                (eid,)
+            )
+
+            count = cursor.fetchone()[0]
+
+            if count > 0:
+                print("Fail")
+                return
+ 
+        cursor.execute(
+            "INSERT INTO Hosting (eid, vid, is_primary) VALUES (%s, %s, %s)",
+            (eid, vid, is_primary)
+        )
+
+        con.commit()
+
+        print("Success")
+    except Exception:
+        print("Fail")
+    finally:
+        cursor.close()
+        con.close()
+
+def reserve_slot(eid, snum, uid):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT is_reserved FROM Slot WHERE eid = %s AND snum = %s",
+            (eid, snum)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None or row[0]:  # not found or already reserved
+            print("Fail")
+            return
+ 
+        cursor.execute(
+            "UPDATE Slot SET is_reserved = TRUE, uid = %s WHERE eid = %s AND snum = %s",
+            (uid, eid, snum)
+        )
+
+        con.commit()
+        
+        print("Success")
+    except Exception:
+        print("Fail")
+    finally:
+        cursor.close()
+        con.close()
 
 def cancel_reservation():
    pass

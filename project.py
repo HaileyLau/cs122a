@@ -347,6 +347,24 @@ def main():
 
     if function_name == "import":
         import_data(sys.argv[2])
+    elif function_name == "insertAdmin":
+        insert_admin(
+            int(sys.argv[2]),   # uid
+            sys.argv[3],        # email
+            sys.argv[4],        # username
+            sys.argv[5],        # joined (YYYY-MM-DD)
+            sys.argv[6],        # firstname
+            sys.argv[7]         # lastname
+        )
+    elif function_name == "addVenue":
+        is_primary = sys.argv[4].lower() == "true"
+        
+        # eid vid is_primary
+        add_venue(int(sys.argv[2]), int(sys.argv[3]), is_primary)
+ 
+    elif function_name == "reserveSlot":
+        # eid snum uid
+        reserve_slot(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
 
 if __name__ == "__main__":
     main()

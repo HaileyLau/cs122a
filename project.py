@@ -421,8 +421,30 @@ def popular_event_types():
 def participant_schedule():
     pass
 
-def organizer_stats():
-   pass
+def organizer_stats(n):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT o.uid, u.username, o.department, COUNT(e.eid) FROM Organizer o " \
+            "JOIN User u ON o.uid = u.uid JOIN Event e ON o.uid = e.creator_uid " \
+            "GROUP BY o.uid, u.username, o.department " \
+            "HAVING COUNT(e.eid) >= %s ORDER BY COUNT(e.eid) DESC, o.uid ASC",
+            (n,)
+        )
+
+        organizers = cursor.fetchall()
+
+        for row in organizers:
+            print(f"{row[0]},{row[1]},{row[2]},{row[3]}")
+
+        return organizers
+    except Exception:
+        return None
+    finally:
+        cursor.close()
+        con.close()
 
 def venue_events():
     pass
@@ -459,6 +481,9 @@ def main():
     elif function_name == "deleteOrganizer":
         # uid
         delete_organizer(int(sys.argv[2]))
+    elif function_name == "organizerStats":
+        # n
+        organizer_stats(int(sys.argv[2]))
 
 if __name__ == "__main__":
     main()

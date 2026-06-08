@@ -41,6 +41,7 @@ import mysql.connector
 import sys
 import csv
 import os
+from datetime import datetime
 
 def get_sql_connection():
     """Establish the database connection"""
@@ -145,7 +146,7 @@ def import_data(folderName):
             uid INT,
             PRIMARY KEY (eid, snum),
             FOREIGN KEY (eid) REFERENCES Event(eid) ON DELETE CASCADE,
-            FOREIGN KEY (uid) REFERENCES Participant(uid) ON DELETE CASCADE
+            FOREIGN KEY (uid) REFERENCES Participant(uid) ON DELETE SET NULL
         );
         """)
 
@@ -318,14 +319,99 @@ def reserve_slot(eid, snum, uid):
         cursor.close()
         con.close()
 
-def cancel_reservation():
-   pass
+def cancel_reservation(eid, snum, uid):
+    con = get_sql_connection()
+    cursor = con.cursor()
 
-def update_event():
-    pass
+    try:
+        cursor.execute(
+            "SELECT EXISTS (SELECT 1 FROM Slot WHERE eid = %s AND snum = %s AND uid = %s)",
+            (eid, snum, uid)
+        )
 
-def delete_organizer():
-    pass
+        participant_reserved = cursor.fetchone()
+
+        # Slot is not reserved by given participant
+        if not participant_reserved or participant_reserved[0] == 0:
+            print("Fail")
+            return False
+        
+        # Mark slot as unreserved and remove participant
+        cursor.execute(
+            "UPDATE Slot SET is_reserved = FALSE, uid = NULL WHERE eid = %s AND snum = %s",
+            (eid, snum)
+        )
+
+        con.commit()
+
+        print("Success")
+        return True
+    except Exception:
+        print("Fail")
+        return False
+    finally:
+        cursor.close()
+        con.close()
+
+def update_event(eid, title, datetime):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT EXISTS (SELECT 1 FROM Event WHERE eid = %s)",
+            (eid,)
+        )
+
+        event_exists = cursor.fetchone()
+
+        # Event with given eid does not exist
+        if not event_exists or event_exists[0] == 0:
+            print("Fail")
+            return False
+        
+        # Update the title and datetime of event
+        cursor.execute(
+            "UPDATE Event SET title = %s, datetime = %s WHERE eid = %s",
+            (title, datetime, eid)
+        )
+
+        con.commit()
+
+        print("Success")
+        return True
+    except Exception:
+        print("Fail")
+        return False
+    finally:
+        cursor.close()
+        con.close()
+
+def delete_organizer(uid):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            "DELETE FROM Organizer WHERE uid = %s",
+            (uid,)
+        )
+
+        # Organizer with given uid does not exist
+        if cursor.rowcount == 0:
+            print("Fail")
+            return False
+
+        con.commit()
+
+        print("Success")
+        return True
+    except Exception:
+        print("Fail")
+        return False
+    finally:
+        cursor.close()
+        con.close()
 
 def available_events():
     pass
@@ -361,10 +447,18 @@ def main():
         
         # eid vid is_primary
         add_venue(int(sys.argv[2]), int(sys.argv[3]), is_primary)
- 
     elif function_name == "reserveSlot":
         # eid snum uid
         reserve_slot(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
+    elif function_name == "cancelReservation":
+        # eid snum uid
+        cancel_reservation(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
+    elif function_name == "updateEvent":
+        # eid title datetime
+        update_event(int(sys.argv[2]), str(sys.argv[3]), datetime.strptime(sys.argv[4], "%Y-%m-%d %H:%M:%S"))
+    elif function_name == "deleteOrganizer":
+        # uid
+        delete_organizer(int(sys.argv[2]))
 
 if __name__ == "__main__":
     main()

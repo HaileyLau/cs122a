@@ -501,13 +501,10 @@ def participant_schedule(pid):
 
         reserved_slots: list[tuple] = cursor.fetchall()
 
+        # print NULL instead of None
         for slot in reserved_slots:
-
-            # Convert each field to a str
-            eid, title, theType, theDatetime, snum, vid, street, city, state, zip = map(str, slot)
-
-            # Join them with commas
-            print(f"{eid},{title},{theType},{theDatetime},{snum},{vid},{street},{city},{state},{zip}")
+            row = [str(x) if x is not None else "NULL" for x in slot]
+            print(",".join(row))
 
     except Exception as e:
         print(f"Unable to get schedule for pid {pid}")

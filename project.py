@@ -225,14 +225,13 @@ def import_data(folderName):
         con.commit()
         print("Success")
 
-    except:
+    except Exception as e:
         print("Fail")
 
     finally:
         cursor.close()
         con.close()
     
-
 def insert_admin(uid, email, username, joined, firstname, lastname):
     con = get_sql_connection()
     cursor = con.cursor()
@@ -257,7 +256,6 @@ def insert_admin(uid, email, username, joined, firstname, lastname):
         cursor.close()
         con.close()
  
-
 def add_venue(eid, vid, is_primary):
     con = get_sql_connection()
     cursor = con.cursor()
@@ -413,13 +411,115 @@ def delete_organizer(uid):
         cursor.close()
         con.close()
 
-def available_events():
-    pass
+def available_events(date):
+    con = get_sql_connection()
+    cursor = con.cursor()
 
-def popular_event_types():
-   pass
-def participant_schedule():
-    pass
+    try:
+        cursor.execute(
+            """
+            SELECT e.eid, e.title, e.type, e.datetime, COUNT(*) 
+            FROM Event as e
+            JOIN Slot AS s ON e.eid = s.eid 
+            WHERE s.is_reserved = FALSE AND e.datetime > %s
+            GROUP BY e.eid, e.title, e.type, e.datetime
+            ORDER BY e.datetime ASC, e.eid ASC;
+            """,
+            (date,)
+        )
+
+        events: list[tuple] = cursor.fetchall()
+
+        for event in events:
+
+            # Convert each field into a str
+            eid, title, theType, theDatetime, count = map(str, event)
+
+            # Join them with commas
+            print(f"{eid},{title},{theType},{theDatetime},{count}")
+
+    except Exception as e:
+        print("Unable to retrieve available events")
+        print(e)
+
+    finally:
+        cursor.close()
+        con.close()
+
+
+def popular_event_types(num_slots):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT e.type, COUNT(*)
+            FROM Event as e
+            JOIN Slot AS s ON s.eid = e.eid
+            WHERE s.is_reserved = TRUE 
+            GROUP BY e.type
+            HAVING COUNT(*) >= %s
+            ORDER BY COUNT(*) DESC, e.type ASC;
+            """,
+            (num_slots,)
+        )
+
+        event_types: list[tuple] = cursor.fetchall()
+
+        for type in event_types:
+
+            # Convert each field to a str
+            theType, count = map(str, type)
+
+            # Join them with commas
+            print(f"{theType},{count}")
+
+    except Exception as e:
+        print("Unable to retrieve popular event types")
+        print(e)
+
+    finally:
+        cursor.close()
+        con.close()
+
+def participant_schedule(pid):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT e.eid, e.title, e.type, e.datetime, s.snum, v.vid, v.street, v.city, v.state, v.zip
+            FROM Event as e
+            JOIN Slot AS s ON s.eid = e.eid
+            JOIN Hosting AS h ON h.eid = e.eid
+            JOIN Venue AS v ON v.vid = h.vid
+            JOIN Participant AS p ON p.uid = s.uid
+            WHERE p.uid = %s
+            ORDER BY e.datetime ASC;
+            """,
+            (pid,)
+        )
+
+        reserved_slots: list[tuple] = cursor.fetchall()
+
+        for slot in reserved_slots:
+
+            # Convert each field to a str
+            eid, title, theType, theDatetime, snum, vid, street, city, state, zip = map(str, slot)
+
+            # Join them with commas
+            print(f"{eid},{title},{theType},{theDatetime},{snum},{vid},{street},{city},{state},{zip}")
+
+    except Exception as e:
+        print(f"Unable to get schedule for pid {pid}")
+        print(e)
+
+    finally:
+        cursor.close()
+        con.close()
+
 
 def organizer_stats(n):
     con = get_sql_connection()
@@ -446,8 +546,40 @@ def organizer_stats(n):
         cursor.close()
         con.close()
 
-def venue_events():
-    pass
+def venue_events(vid):
+    con = get_sql_connection()
+    cursor = con.cursor()
+
+    try: 
+        cursor.execute(
+            """
+            SELECT e.eid, e.title, e.type, e.datetime, h.is_primary
+            FROM Event AS e
+            JOIN Hosting AS h ON h.eid = e.eid
+            JOIN Venue AS v ON v.vid = h.vid
+            WHERE v.vid = %s
+            ORDER BY e.datetime ASC, eid DESC
+            """,
+            (vid,)
+        )
+
+        events: list[tuple] = cursor.fetchall()
+
+        for event in events:
+
+            # Convert each field to a str
+            eid, title, theType, theDatetime, isPrimary = map(str, event)
+
+            # Join them with commas
+            print(f"{eid},{title},{theType},{theDatetime},{isPrimary}")
+    
+    except Exception as e:
+        print(f"Unable to retrieve events for vid {vid}")
+        print(e)
+
+    finally:
+        cursor.close()
+        con.close()
 
 
 def main():
@@ -484,6 +616,18 @@ def main():
     elif function_name == "organizerStats":
         # n
         organizer_stats(int(sys.argv[2]))
+    elif function_name == "availableEvents":
+        # date
+        available_events(datetime.strptime(sys.argv[2], "%Y-%m-%d"))
+    elif function_name == "popularEventTypes":
+        # num_slots
+        popular_event_types(int(sys.argv[2]))
+    elif function_name == "participantSchedule":
+        # pid
+        participant_schedule(int(sys.argv[2]))
+    elif function_name == "venueEvents":
+        #vid
+        venue_events(int(sys.argv[2]))
 
 if __name__ == "__main__":
     main()

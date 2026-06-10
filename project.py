@@ -59,8 +59,6 @@ def import_data(folderName):
         Boolean
     """
 
-    print(f"Importing from: {folderName}")
-
     con = get_sql_connection()
     cursor = con.cursor()
 

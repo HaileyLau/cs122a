@@ -491,10 +491,9 @@ def participant_schedule(pid):
             SELECT e.eid, e.title, e.type, e.datetime, s.snum, v.vid, v.street, v.city, v.state, v.zip
             FROM Event as e
             JOIN Slot AS s ON s.eid = e.eid
-            JOIN Hosting AS h ON h.eid = e.eid
-            JOIN Venue AS v ON v.vid = h.vid
-            JOIN Participant AS p ON p.uid = s.uid
-            WHERE p.uid = %s
+            LEFT JOIN Hosting AS h ON h.eid = e.eid AND h.is_primary = TRUE
+            LEFT JOIN Venue AS v ON v.vid = h.vid
+            WHERE s.uid = %s
             ORDER BY e.datetime ASC;
             """,
             (pid,)
